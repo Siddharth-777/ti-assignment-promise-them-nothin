@@ -1,0 +1,24 @@
+[
+  {
+    "customer_id": "acme",
+    "base_limit": 300,
+    "overrides": []
+  },
+  {
+    "customer_id": "northwind",
+    "base_limit": 300,
+    "overrides": [
+      {
+        "customer_id": "northwind",
+        "base_limit": 300,
+        "override_limit": 1500,
+        "override_start": "02:00",
+        "override_end": "04:00",
+        "owner": "Marcus Webb",
+        "reason": "Nightly batch job window - contracted exception for 02:00-04:00 UTC",
+        "review_date": "2026-09-15",
+        "config_version": "1.0.0"
+      }
+    ]
+  }
+]

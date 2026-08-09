@@ -1,0 +1,2 @@
+-- Lua script for atomic sliding window log check-and-record.
+-- Loaded once via defineCommand. Never inlined as a string in JS.

@@ -1,0 +1,16 @@
+{
+  "name": "relayapi-rate-limiter",
+  "version": "1.0.0",
+  "description": "Per-customer rate limiter service for RelayAPI",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

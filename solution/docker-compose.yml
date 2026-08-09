@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  app1:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+
+  app2:
+    build: .
+    ports:
+      - "3002:3002"
+    environment:
+      PORT: "3002"
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+
+  app3:
+    build: .
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: "3003"
+      REDIS_HOST: redis
+    depends_on:
+      - redis
