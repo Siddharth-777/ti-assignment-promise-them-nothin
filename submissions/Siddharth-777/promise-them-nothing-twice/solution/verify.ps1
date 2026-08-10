@@ -40,9 +40,9 @@ while ($elapsed -lt $Timeout) {
     $ready = 0
     foreach ($port in $Ports) {
         try {
-            $response = Invoke-WebRequest -Uri "http://localhost:${port}/api/v1/ping" `
+            $response = Invoke-WebRequest -Uri "https://localhost:${port}/api/v1/ping" `
                 -Headers @{ "X-Customer-Id" = "acme" } `
-                -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+                -UseBasicParsing -TimeoutSec 3 -SkipCertificateCheck -ErrorAction Stop
             if ($response.StatusCode -eq 200) { $ready++ }
         } catch {}
     }
@@ -58,9 +58,9 @@ if (-not $allReady) {
     Write-Host "ERROR: Timed out after ${Timeout}s. Status:" -ForegroundColor Red
     foreach ($port in $Ports) {
         try {
-            Invoke-WebRequest -Uri "http://localhost:${port}/api/v1/ping" `
+            Invoke-WebRequest -Uri "https://localhost:${port}/api/v1/ping" `
                 -Headers @{ "X-Customer-Id" = "acme" } `
-                -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop | Out-Null
+                -UseBasicParsing -TimeoutSec 3 -SkipCertificateCheck -ErrorAction Stop | Out-Null
             Write-Host "       port ${port}: OK"
         } catch {
             Write-Host "       port ${port}: NOT RESPONDING" -ForegroundColor Red

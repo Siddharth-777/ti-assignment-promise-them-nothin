@@ -35,7 +35,7 @@ all_ready=false
 while [ $elapsed -lt $TIMEOUT ]; do
   ready=0
   for port in "${PORTS[@]}"; do
-    if curl -sf -H "X-Customer-Id: acme" "http://localhost:${port}/api/v1/ping" &>/dev/null; then
+    if curl -ksf -H "X-Customer-Id: acme" "https://localhost:${port}/api/v1/ping" &>/dev/null; then
       ready=$((ready + 1))
     fi
   done
@@ -50,7 +50,7 @@ done
 if [ "$all_ready" = false ]; then
   echo "ERROR: Timed out after ${TIMEOUT}s. Status:"
   for port in "${PORTS[@]}"; do
-    if curl -sf -H "X-Customer-Id: acme" "http://localhost:${port}/api/v1/ping" &>/dev/null; then
+    if curl -ksf -H "X-Customer-Id: acme" "https://localhost:${port}/api/v1/ping" &>/dev/null; then
       echo "       port ${port}: OK"
     else
       echo "       port ${port}: NOT RESPONDING"

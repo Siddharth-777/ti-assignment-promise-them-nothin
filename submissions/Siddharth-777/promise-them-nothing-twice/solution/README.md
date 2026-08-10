@@ -37,6 +37,10 @@ The script exits 0 on all-pass, 1 on any failure (CI-friendly). The manual steps
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (free) with Docker Compose. There is no non-Docker path - config is baked into images at build time and the three-node deployment is Docker Compose-orchestrated by design.
 
+### TLS
+
+The service runs over HTTPS. Each container auto-generates a self-signed certificate on first boot (no manual step required). Certs are ephemeral — stored in a tmpfs mount and regenerated on every `docker compose up`. They are not committed to the repo. For local testing use `curl -k` (or `--insecure`) to skip verification. The load harness handles this automatically via `rejectUnauthorized: false`. To generate certs outside Docker (e.g., for IDE debugging): `bash certs/generate.sh`.
+
 ### Run the service
 
 From this `solution/` directory (where this README and `docker-compose.yml` live):
@@ -54,12 +58,12 @@ This starts:
 ### Verify all nodes are running
 
 ```bash
-curl -H "X-Customer-Id: acme" http://localhost:3001/api/v1/ping
-curl -H "X-Customer-Id: acme" http://localhost:3002/api/v1/ping
-curl -H "X-Customer-Id: acme" http://localhost:3003/api/v1/ping
+curl -k -H "X-Customer-Id: acme" https://localhost:3001/api/v1/ping
+curl -k -H "X-Customer-Id: acme" https://localhost:3002/api/v1/ping
+curl -k -H "X-Customer-Id: acme" https://localhost:3003/api/v1/ping
 ```
 
-Each should return:
+The `-k` flag skips certificate verification for the self-signed localhost cert. Each should return:
 
 ```json
 {"status":"ok"}

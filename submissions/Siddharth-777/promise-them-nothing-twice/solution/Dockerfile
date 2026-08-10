@@ -1,5 +1,7 @@
 FROM node:20-alpine
 
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -8,8 +10,8 @@ RUN npm install --production
 
 COPY . .
 
-RUN chown -R node:node /app
+RUN chmod +x entrypoint.sh && chown -R node:node /app
 
 USER node
 
-CMD ["node", "src/server.js"]
+ENTRYPOINT ["./entrypoint.sh"]

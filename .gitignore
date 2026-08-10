@@ -1,3 +1,5 @@
 bedrock.env
 node_modules
 package-lock.json
+submissions/Siddharth-777/promise-them-nothing-twice/solution/certs/*.key
+submissions/Siddharth-777/promise-them-nothing-twice/solution/certs/*.crt

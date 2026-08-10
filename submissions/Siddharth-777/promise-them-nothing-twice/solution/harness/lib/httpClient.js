@@ -1,4 +1,4 @@
-const http = require('http');
+const https = require('https');
 
 function sendRequest(port, customerId) {
   return new Promise((resolve, reject) => {
@@ -8,13 +8,14 @@ function sendRequest(port, customerId) {
       path: '/api/v1/ping',
       method: 'GET',
       headers: {},
+      rejectUnauthorized: false,
     };
 
     if (customerId !== undefined && customerId !== null) {
       options.headers['X-Customer-Id'] = customerId;
     }
 
-    const req = http.request(options, (res) => {
+    const req = https.request(options, (res) => {
       let body = '';
       res.on('data', (chunk) => { body += chunk; });
       res.on('end', () => {
