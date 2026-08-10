@@ -7,6 +7,16 @@
 - Never import, require, or directly invoke service code (`src/`). All interaction is via HTTP requests to the service's listening ports.
 - The service must already be running (all three nodes + Redis) before harness execution begins.
 
+## Infrastructure Boundary
+
+- The harness assumes the service (Docker Compose stack: Redis + three app nodes) is already running. It never starts infrastructure.
+- If a scenario or `run.js` fails because the service is unreachable (connection refused, ECONNREFUSED, Redis connection error), report the failure clearly to the user and instruct them to start the service via Docker Compose. Do not attempt to autonomously start Docker Desktop, run `docker compose up`, or search for alternative Redis installations (WSL, Memurai, npm-based, etc.).
+- Starting infrastructure is the user's responsibility and an explicit decision — not something the harness or agent may do on its own.
+
+## Redis Access
+
+- The harness may use a direct Redis connection solely for test-fixture setup/teardown (e.g., flushing a customer's rate-limit key before a scenario runs) to ensure test isolation between runs. This is distinct from calling service code — the harness still only exercises the rate limiter's actual behavior via HTTP; direct Redis access is never used to assert correctness, only to reset state.
+
 ## Scenario Structure
 
 - Each scenario lives as its own function or file under `harness/scenarios/`, one scenario per concern.
@@ -28,7 +38,7 @@
 
 ## Required Scenarios
 
-1. **Basic boundary** — 99th request allowed, 100th allowed, 101st → 429, for a 100 RPM test customer.
+1. **Basic boundary** — 9th request allowed, 10th allowed, 11th → 429, for a 10 RPM test customer. (10 RPM chosen over 100 for faster test runs and easier-to-eyeball output.)
 2. **Rolling expiration** — window fills to 429, then allows again once the oldest timestamp ages out of the 60s window.
 3. **Three-node enforcement** — one customer's traffic spread across all three nodes still caps at exactly their quota.
 4. **Concurrent boundary race** — simultaneous requests at the last available slot; only one is ever allowed.
@@ -37,7 +47,7 @@
 7. **Boundary-clustered traffic** — bursts around a fixed-window edge still count exactly (no fixed-window reset leakage).
 8. **Northwind override** — applies only inside its configured window, base limit applies outside it, exceeding the override limit still rejects.
 9. **Identity handling** — missing `X-Customer-Id` → 401, unknown customer → 403, neither creates limiter state in Redis.
-10. **Retry-After accuracy** — rejected requests return `Retry-After` > 0, matching the oldest-timestamp calculation, not a hardcoded number.
+10. **Retry-After accuracy** — rejected requests return `Retry-After` > 0, matching the oldest-timestamp calculation, not a hardcoded number. Must verify the actual numeric value against a computed expected value based on request timing — a positive-integer check alone is insufficient.
 11. **Redis failure** — simulated Redis outage → requests rejected (fail closed), never falls back to local counters.
 12. **Auditability** — a logged/returned decision includes: `customer_id`, `timestamp`, `effective_limit`, `window_count`, `decision`, `reason`, `config_version`, `node_id`.
 13. **Idempotent retry** — same idempotency key sent twice is not double-counted against quota.
