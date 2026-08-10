@@ -52,6 +52,7 @@ async function run() {
   // Date.now() and Redis TIME. Safe: well under the 2s stagger before requests 2–10 expire.
   const waitMs = WINDOW_MS - elapsed + 500;
   if (waitMs > 0) {
+    console.log(`  Waiting ~${Math.round(waitMs / 1000)}s for the sliding window to roll forward...`);
     await new Promise((r) => setTimeout(r, waitMs));
   }
 

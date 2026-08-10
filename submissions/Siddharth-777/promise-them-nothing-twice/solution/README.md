@@ -39,8 +39,9 @@ The script exits 0 on all-pass, 1 on any failure (CI-friendly). The manual steps
 
 ### Run the service
 
+From this `solution/` directory (where this README and `docker-compose.yml` live):
+
 ```bash
-cd solution
 docker compose up --build
 ```
 

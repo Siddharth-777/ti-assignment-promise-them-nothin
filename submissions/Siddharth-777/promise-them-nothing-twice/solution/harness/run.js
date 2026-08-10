@@ -10,18 +10,25 @@ const redisFailure = require('./scenarios/redisFailure');
 const retryAfterAccuracy = require('./scenarios/retryAfterAccuracy');
 const { printReport, writeJsonReport } = require('./lib/report');
 
+const scenarios = [
+  ['Basic boundary', basicBoundary],
+  ['Rolling expiration', rollingExpiration],
+  ['Three-node enforcement', threeNodeEnforcement],
+  ['Concurrent boundary race', concurrentRace],
+  ['Customer isolation', customerIsolation],
+  ['Equal-tier fairness', equalTierFairness],
+  ['Northwind override', northwindOverride],
+  ['Identity handling', identityHandling],
+  ['Redis failure', redisFailure],
+  ['Retry-After accuracy', retryAfterAccuracy],
+];
+
 async function main() {
   const results = [];
-  results.push(await basicBoundary());
-  results.push(await rollingExpiration());
-  results.push(await threeNodeEnforcement());
-  results.push(await concurrentRace());
-  results.push(await customerIsolation());
-  results.push(await equalTierFairness());
-  results.push(await northwindOverride());
-  results.push(await identityHandling());
-  results.push(await redisFailure());
-  results.push(await retryAfterAccuracy());
+  for (const [label, fn] of scenarios) {
+    console.log(`Running: ${label}...`);
+    results.push(await fn());
+  }
   const failures = printReport(results);
   const jsonPath = writeJsonReport(results);
   console.log(`\nResults written to ${jsonPath}`);

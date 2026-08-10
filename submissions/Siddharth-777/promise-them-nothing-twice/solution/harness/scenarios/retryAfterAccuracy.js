@@ -29,6 +29,7 @@ async function run() {
   }
 
   // Wait 5s so Retry-After diverges from 60 — a hardcoded value would fail here
+  console.log('  Waiting ~5s so Retry-After diverges from a hardcoded 60...');
   await new Promise((r) => setTimeout(r, 5000));
 
   const rejected = await sendRequest(PORT, CUSTOMER);

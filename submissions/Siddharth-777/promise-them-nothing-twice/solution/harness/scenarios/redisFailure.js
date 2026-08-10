@@ -61,6 +61,7 @@ async function run() {
     }
 
     // Step 2: Stop Redis
+    console.log('  Stopping Redis to test fail-closed behavior...');
     try {
       execSync('docker compose stop redis', { cwd: COMPOSE_DIR, stdio: 'ignore' });
       redisStopped = true;
@@ -112,6 +113,7 @@ async function run() {
     }
 
     // Step 5: Restart Redis
+    console.log('  Restarting Redis...');
     try {
       execSync('docker compose start redis', { cwd: COMPOSE_DIR, stdio: 'ignore' });
       redisStopped = false;
