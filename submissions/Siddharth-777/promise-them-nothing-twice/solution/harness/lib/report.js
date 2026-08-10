@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 function printReport(results) {
   const nameWidth = Math.max(4, ...results.map(r => r.name.length));
 
@@ -18,4 +21,20 @@ function printReport(results) {
   return results.length - passed;
 }
 
-module.exports = { printReport };
+function writeJsonReport(results) {
+  const passed = results.filter(r => r.pass).length;
+  const report = {
+    summary: {
+      total: results.length,
+      passed,
+      failed: results.length - passed,
+      timestamp: new Date().toISOString(),
+    },
+    results,
+  };
+  const outPath = path.join(__dirname, '..', 'results.json');
+  fs.writeFileSync(outPath, JSON.stringify(report, null, 2) + '\n');
+  return outPath;
+}
+
+module.exports = { printReport, writeJsonReport };

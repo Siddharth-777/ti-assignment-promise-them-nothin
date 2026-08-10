@@ -8,4 +8,8 @@ RUN npm install --production
 
 COPY . .
 
+RUN chown -R node:node /app
+
+USER node
+
 CMD ["node", "src/server.js"]

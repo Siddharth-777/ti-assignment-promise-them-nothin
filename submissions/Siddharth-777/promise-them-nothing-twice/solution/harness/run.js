@@ -8,7 +8,7 @@ const northwindOverride = require('./scenarios/northwindOverride');
 const identityHandling = require('./scenarios/identityHandling');
 const redisFailure = require('./scenarios/redisFailure');
 const retryAfterAccuracy = require('./scenarios/retryAfterAccuracy');
-const { printReport } = require('./lib/report');
+const { printReport, writeJsonReport } = require('./lib/report');
 
 async function main() {
   const results = [];
@@ -23,6 +23,8 @@ async function main() {
   results.push(await redisFailure());
   results.push(await retryAfterAccuracy());
   const failures = printReport(results);
+  const jsonPath = writeJsonReport(results);
+  console.log(`\nResults written to ${jsonPath}`);
   process.exit(failures > 0 ? 1 : 0);
 }
 

@@ -5,6 +5,11 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /data
 
   app1:
     build: .
@@ -15,6 +20,9 @@ services:
       REDIS_HOST: redis
     depends_on:
       - redis
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
 
   app2:
     build: .
@@ -25,6 +33,9 @@ services:
       REDIS_HOST: redis
     depends_on:
       - redis
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
 
   app3:
     build: .
@@ -35,3 +46,6 @@ services:
       REDIS_HOST: redis
     depends_on:
       - redis
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
