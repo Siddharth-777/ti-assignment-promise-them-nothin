@@ -30,8 +30,16 @@ if override_limit > 0 then
   -- Convert current time to seconds since midnight UTC
   local seconds_since_midnight = now_seconds % 86400
 
-  if seconds_since_midnight >= override_start and seconds_since_midnight < override_end then
-    effective_limit = override_limit
+  if override_start <= override_end then
+    -- Normal window (e.g., 02:00-04:00)
+    if seconds_since_midnight >= override_start and seconds_since_midnight < override_end then
+      effective_limit = override_limit
+    end
+  else
+    -- Midnight-crossing window (e.g., 23:30-00:30)
+    if seconds_since_midnight >= override_start or seconds_since_midnight < override_end then
+      effective_limit = override_limit
+    end
   end
 end
 

@@ -1,0 +1,5 @@
+certs/server.key
+certs/server.crt
+node_modules
+harness
+.git

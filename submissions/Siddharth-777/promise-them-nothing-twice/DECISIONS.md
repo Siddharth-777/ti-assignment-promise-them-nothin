@@ -41,7 +41,7 @@ We can not enforce 300 RPM strictly because it guarantees Northwind sees 429 eve
 - Docker config baking: `COPY . .` in Dockerfile meant `docker compose restart` served stale config — documented that `--build` is required after config changes.
 - Northwind test timing circularity: hardcoded override windows expired between test runs — fixed by computing fresh windows dynamically on every execution.
 - An early non-reproducing timing anomaly in the rolling window test was investigated across various sessions. The two most plausible causes were cross-scenario Redis contamination and margin insufficiency. These two were both ruled out with direct evidence through code review, confirming full state isolation between scenarios and six consecutive clean passes after the margin fix. 
-- Investigated apparent Redis-reconnect log noise during the redisFailure scenario and confirmed it's ioredis's default backoff (not a bug) and that fail-closed correctly triggers within the request-level retry budget, independent of the longer-running background reconnection noise.
+- Midnight-crossing override windows were previously a known, documented limitation (override_start > override_end was unhandled). This was upgraded from a documented limitation to a fixed bug after a real test run generated a window that happened to cross midnight and failed — the Lua script's window comparison now correctly handles both normal (start < end) and midnight-crossing (start > end) windows via an OR condition instead of AND.
 
 ## If I had four more hours
 

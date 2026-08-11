@@ -39,7 +39,7 @@ The script exits 0 on all-pass, 1 on any failure (CI-friendly). The manual steps
 
 ### TLS
 
-The service runs over HTTPS. Each container auto-generates a self-signed certificate on first boot (no manual step required). Certs are ephemeral — stored in a tmpfs mount and regenerated on every `docker compose up`. They are not committed to the repo. For local testing use `curl -k` (or `--insecure`) to skip verification. The load harness handles this automatically via `rejectUnauthorized: false`. To generate certs outside Docker (e.g., for IDE debugging): `bash certs/generate.sh`.
+The service runs over HTTPS using a single shared self-signed certificate. The cert is generated on the host via `bash certs/generate.sh` (the verify scripts do this automatically if the cert is absent) and bind-mounted read-only into all three containers. The cert is not committed to the repo. For local testing use `curl -k` (or `--insecure`) to skip verification. The load harness trusts this specific cert via the Node.js `ca` TLS option — no blanket verification bypass.
 
 ### Run the service
 

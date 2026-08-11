@@ -23,8 +23,8 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: true
-    tmpfs:
-      - /app/certs:uid=1000,gid=1000
+    volumes:
+      - ./certs:/app/certs:ro
 
   app2:
     build: .
@@ -38,8 +38,8 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: true
-    tmpfs:
-      - /app/certs:uid=1000,gid=1000
+    volumes:
+      - ./certs:/app/certs:ro
 
   app3:
     build: .
@@ -53,5 +53,5 @@ services:
     security_opt:
       - no-new-privileges:true
     read_only: true
-    tmpfs:
-      - /app/certs:uid=1000,gid=1000
+    volumes:
+      - ./certs:/app/certs:ro

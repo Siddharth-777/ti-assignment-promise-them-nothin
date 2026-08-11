@@ -1,4 +1,10 @@
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
+
+const CA_CERT = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'certs', 'server.crt')
+);
 
 function sendRequest(port, customerId) {
   return new Promise((resolve, reject) => {
@@ -8,7 +14,7 @@ function sendRequest(port, customerId) {
       path: '/api/v1/ping',
       method: 'GET',
       headers: {},
-      rejectUnauthorized: false,
+      ca: CA_CERT,
     };
 
     if (customerId !== undefined && customerId !== null) {
