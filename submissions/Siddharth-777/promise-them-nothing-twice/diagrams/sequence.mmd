@@ -1,0 +1,74 @@
+sequenceDiagram
+    participant H as Harness<br/>(scenario + httpClient)
+    participant App as AppNode<br/>(server.js — Express HTTPS)
+    participant RL as rateLimiter<br/>(middleware)
+    participant CR as ConfigResolver<br/>(configResolver.js)
+    participant RC as RedisClient<br/>(redis-client.js)
+    participant R as Redis<br/>(limiter.lua — atomic Lua)
+
+    H->>H: pickRandomPort() → 3001|3002|3003
+    H->>App: HTTPS GET /api/v1/ping<br/>Header: X-Customer-Id = {id}<br/>(TLS verified via CA cert)
+    activate App
+    App->>RL: rateLimiter(req, res, next)
+    activate RL
+
+    RL->>RL: customerId = req.headers['x-customer-id']
+
+    alt Missing X-Customer-Id header
+        RL-->>App: res.status(401).json({error: 'missing_customer_id'})
+        App-->>H: 401 Unauthorized
+    end
+
+    RL->>CR: resolveLimit(customerId)
+    activate CR
+    CR->>CR: customers.get(customerId) from Map
+    alt Customer found with overrides
+        CR-->>RL: {baseLimit, overrideLimit, overrideStart, overrideEnd, windowSize: 60}
+    else Customer found without overrides
+        CR-->>RL: {baseLimit, overrideLimit: 0, overrideStart: 0, overrideEnd: 0, windowSize: 60}
+    else Customer not found
+        CR-->>RL: null
+        RL-->>App: res.status(403).json({error: 'unknown_customer'})
+        App-->>H: 403 Forbidden
+    end
+    deactivate CR
+
+    RL->>RC: checkRateLimit(customerId, baseLimit, overrideLimit, overrideStart, overrideEnd, windowSize)
+    activate RC
+    RC->>RC: key = 'ratelimit:' + customerId
+    RC->>R: redis.checkAndRecord(key, baseLimit, overrideLimit, overrideStart, overrideEnd, 60)
+    activate R
+
+    Note over R: Step 1: redis.call('TIME') → now_seconds, now_micro
+    Note over R: Step 2: INCR ratelimit:{id}:seq (collision avoidance)
+    Note over R: Step 3: Determine effective_limit<br/>(override_start <= override_end ? normal :<br/>midnight-crossing window logic)
+    Note over R: Step 4: ZREMRANGEBYSCORE key -inf (now_micro - 60s)
+    Note over R: Step 5: ZCARD key → current_count
+
+    alt current_count >= effective_limit (REJECTED)
+        Note over R: ZRANGE key 0 0 WITHSCORES → oldest_micro<br/>retry_after = ceil((oldest + 60s - now) / 1e6)<br/>min 1 second
+        R-->>RC: [0, current_count, effective_limit, retry_after, now_s, now_us]
+    else current_count < effective_limit (ALLOWED)
+        Note over R: ZADD key now_micro "{now_micro}-{seq}"<br/>PEXPIRE key 60000
+        R-->>RC: [1, current_count+1, effective_limit, 0, now_s, now_us]
+    end
+    deactivate R
+
+    RC->>RC: Parse: {allowed, currentCount, effectiveLimit, retryAfter, nowSeconds, nowMicroseconds}
+    RC-->>RL: result object
+    deactivate RC
+
+    alt result.allowed === true
+        RL->>RL: res.set('X-RateLimit-Limit', effectiveLimit)<br/>res.set('X-RateLimit-Remaining', effectiveLimit - currentCount)
+        RL-->>App: next()
+        App-->>H: 200 {status: 'ok'}<br/>+ X-RateLimit-Limit, X-RateLimit-Remaining headers
+    else result.allowed === false
+        RL->>RL: res.set('Retry-After', retryAfter)<br/>res.set('X-RateLimit-Limit', effectiveLimit)<br/>res.set('X-RateLimit-Remaining', '0')
+        RL-->>App: res.status(429).json({error: 'rate_limit_exceeded'})
+        App-->>H: 429 + Retry-After header
+    end
+
+    deactivate RL
+    deactivate App
+
+    Note over H,App: On Redis connection error (catch block):<br/>Fail-closed → 429 {error: 'service_unavailable_fail_closed'}<br/>Retry-After: 1

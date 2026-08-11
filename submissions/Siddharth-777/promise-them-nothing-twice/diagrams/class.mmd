@@ -1,0 +1,101 @@
+classDiagram
+    direction TB
+
+    class ServerJS {
+        <<entrypoint>>
+        -sslOptions : Object
+        -app : Express
+        -PORT : number
+        +route: GET /api/v1/ping
+        +https.createServer(sslOptions, app)
+    }
+
+    class RateLimiter {
+        <<middleware - rateLimiter.js>>
+        +rateLimiter(req, res, next) async
+        -extracts X-Customer-Id header
+        -401 if missing header
+        -403 if unknown customer
+        -429 if over limit or Redis failure
+    }
+
+    class ConfigResolver {
+        <<configResolver.js>>
+        -configPath : string
+        -customers : Map
+        -timeToSeconds(str) number
+        +resolveLimit(customerId) Object or null
+    }
+
+    class RedisClient {
+        <<redis-client.js>>
+        +redis : Redis instance
+        -luaScript : string
+        +checkRateLimit(customerId, baseLimit, overrideLimit, overrideStart, overrideEnd, windowSize) Promise
+    }
+
+    class LimiterLua {
+        <<limiter.lua — Lua script>>
+        +KEYS[1] : ratelimit:customer_id
+        +ARGV[1] : base_limit
+        +ARGV[2] : override_limit
+        +ARGV[3] : override_start
+        +ARGV[4] : override_end
+        +ARGV[5] : window_size
+        -TIME() now_seconds, now_micro
+        -INCR seq
+        -ZREMRANGEBYSCORE prune expired
+        -ZCARD count active
+        -ZADD record timestamp
+        -PEXPIRE set TTL
+        +returns [allowed, count, limit, retryAfter, nowS, nowUs]
+    }
+
+    class RunJS {
+        <<harness/run.js — entrypoint>>
+        -scenarios : Array of [label, fn]
+        +main() async
+        +process.exit(failures > 0 ? 1 : 0)
+    }
+
+    class HttpClient {
+        <<harness/lib/httpClient.js>>
+        -CA_CERT : Buffer
+        +sendRequest(port, customerId) Promise
+    }
+
+    class NodeRouter {
+        <<harness/lib/nodeRouter.js>>
+        +PORTS : [3001, 3002, 3003]
+        +pickRandomPort() number
+    }
+
+    class Report {
+        <<harness/lib/report.js>>
+        +printReport(results) number
+        +writeJsonReport(results) string
+    }
+
+    class Scenarios {
+        <<harness/scenarios/ — 10 modules>>
+        +basicBoundary.run() Promise
+        +rollingExpiration.run() Promise
+        +threeNodeEnforcement.run() Promise
+        +concurrentRace.run() Promise
+        +customerIsolation.run() Promise
+        +equalTierFairness.run() Promise
+        +northwindOverride.run() Promise
+        +identityHandling.run() Promise
+        +redisFailure.run() Promise
+        +retryAfterAccuracy.run() Promise
+    }
+
+    ServerJS --> RateLimiter : uses as middleware
+    RateLimiter --> ConfigResolver : imports resolveLimit
+    RateLimiter --> RedisClient : imports checkRateLimit
+    RedisClient --> LimiterLua : defineCommand loads Lua script
+
+    RunJS --> Scenarios : imports all 10 scenario modules
+    RunJS --> Report : imports printReport, writeJsonReport
+    Scenarios --> HttpClient : imports sendRequest
+    Scenarios --> NodeRouter : imports pickRandomPort, PORTS

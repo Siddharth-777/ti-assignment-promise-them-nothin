@@ -6,6 +6,29 @@ Per-customer rate limiter service with sliding window log algorithm, enforced ac
 
 **Algorithm:** Exact sliding window log - each accepted request records a microsecond-precision timestamp in a per-customer Redis sorted set, and every new request prunes entries older than 60 seconds before counting. This gives deterministic, auditable enforcement with zero approximation error. See [DECISIONS.md](../DECISIONS.md) for the full reasoning and rejected alternatives.
 
+## Project structure
+
+```
+submissions/Siddharth-777/promise-them-nothing-twice/
+├── solution/
+│   ├── src/                # service source (server, middleware, Lua script, config resolver)
+│   ├── harness/            # load-testing harness, runner, and scenario suite
+│   ├── config/             # customers.json — tiers and rate-limit overrides
+│   ├── certs/              # TLS cert + key + generation script (git-ignored)
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── entrypoint.sh
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── verify.sh
+│   ├── verify.ps1
+│   └── README.md           # this file
+├── sessions/               # AI session exports (Claude Code), chronological
+├── notes/                  # handwritten understanding notes
+├── diagrams/               # architecture, class, and sequence diagrams (Mermaid)
+└── DECISIONS.md            # one-page conflict resolution + design summary
+```
+
 ## Test customers
 
 | customer_id | base_limit | override |

@@ -5,12 +5,20 @@ The CTO team demands hard auditable strictly fair enforcement where no customer 
  
 We can not enforce 300 RPM strictly because it guarantees Northwind sees 429 every night. We can not reject Northwind during the night batch because it does not enforce their contracted rate. This conflict may seem mutually exclusive under literal reading but can be resolved with some config change rather than a code bypass.
 
-**Resolution:** My solution uses a time-windowed config override that raises Northwind's effective limit to 1500 RPM only during 2-4 UTC, driven entirely by a config file rather than a hardcoded customer-ID check. The LUA script evaluates the override activation using Redis server time so all nodes agree without any contradiction concurrently. 
+**Resolution:** My solution uses a time-windowed config override that raises Northwind's effective limit to 1500 RPM only during 2-4 UTC, driven entirely by a config file rather than a hardcoded customer-ID check. The override activation uses Redis server time inside the atomic Lua decision, so all nodes use a common authoritative clock for window evaluation.
 
 **Rejected:** This solution intentionally rejects a flat 24/7 elevated limit, which violates the tier equality. There is no hardcoded customer-ID bypass in the middleware. We do not provide unlimited traffic during the window and enforce a higher limit for the nightly batch.
 
 **Residual gap:** If Northwind's real traffic exceeds 1500 rpm during the window, they will still receive 429. A queuing approach could guarantee zero rejections but was deferred because the prototype proves the mechanism, not the capacity planning math. 
 
+### Open questions on the override:
+**Who authorized 300→1500?** The 1,500 rpm figure is an engineering judgment call, not a business sign-off. The config schema's fields exist so a real authorization could be recorded in production, but here they are placeholders, not evidence of actual approval.
+
+**Why exactly 1500?** Since observed traffic was 800–1200 during the nightly batch, 1500 rpm gives roughly 25% headroom depending on real traffic in that range. This is a deliberately stated judgment call to comfortably absorb normal traffic variance without granting unnecessary excess capacity.
+
+**What if Northwind exceeds 1500?** They get 429, same as any customer over their effective limit - a stated residual gap, not a failure. The design does not guarantee zero rejections, only makes them unlikely given observed 800–1200 rpm traffic stays under the configured headroom.
+
+**What if the effective limit changes mid-window?** The new limit applies only to future decisions; existing timestamps are not retroactively removed. If Northwind's limit drops 1500→300 at window close, a customer holding ~1400 recent timestamps stays over the new limit until those entries age out.
 
 
 ## Technical design
@@ -28,6 +36,17 @@ We can not enforce 300 RPM strictly because it guarantees Northwind sees 429 eve
 **Identity:** `X-Customer-Id` trusted as-is; missing → 401, unknown → 403, neither creates Redis state.
 
 **Rejected Algorithms:** Fixed window was rejected due to the boundary flaw, which allows 2x quota across the window edge. Sliding window counter was rejected due to the estimation error, which can overcount, violating the CTO's requirement. Token bucket was rejected because it was built for brief bursts not Northwind's sustained 90 to 120 nightly overage. Leaky bucket was rejected because it needs queuing infra and an unverified latency tolerance assumption. 
+
+### Open questions on the implementation:
+**How do nodes guarantee identical config?** All three nodes load customers.json at startup from the same docker image, built and started together via `docker compose up --build`, so they load identical config at effectively the same time. Planned future work: a config checksum or version field compared across nodes to detect drift explicitly.
+
+**What happens when config changes while nodes run?** Nothing happens automatically - config is loaded once at startup, not watched or hot-reloaded. A change to customers.json only takes effect after` docker compose up --build` is run again.
+
+**Why fail closed instead of queueing?** A direct instruction from the CTO's memo is to reject rather than allow over-limit traffic, and it's simpler to implement correctly and atomically within the timebox. Queueing needs real infrastructure and an unverified assumption about whether Northwind's batch client tolerates a delayed but successful response.
+
+**How does a Redis restart affect rate-limit state?** State resets to zero - no persistent volume is configured, so a restart wipes all customers' recorded timestamps. Every customer effectively gets a fresh quota after a restart, safe in terms of error direction.
+
+**Memory at 1500 rpm?** With ~1,500 entries per customer sitting in the window at once, at ~100 bytes per entry, that's ~150KB per customer - trivial even at hundreds of customers. Redis can hold low thousands of simultaneous peak customers before sharding is needed.
 
 ## Verification
 
